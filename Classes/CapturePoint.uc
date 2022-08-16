@@ -2,12 +2,13 @@ Class CapturePoint extends DeusExDecoration;
 var DeusExPlayer Killer, Victim;
 var bool bTaken;
 var float aliveTime;
+var bool bCritical;
 
 function Tick(float deltatime){
 	local DeusExPlayer P, winP;
 	local vector dist;
 	local float lowestDist;
-
+  
     //Foolproofing to make sure it never triggers twice.
     if(bTaken) return;
 
@@ -19,6 +20,16 @@ function Tick(float deltatime){
     // Preventing any weird timing hickups with the victim being able to confirm themselves as they die.
     if(aliveTime <= 1.0) return;
 
+    if(Killer == None) {
+        BroadcastMessage("A killer has fled the battle and their kill has been removed.");
+        Destroy();
+    }
+
+    if(Victim == None) {
+        BroadcastMessage("A victim has fled the battle and their death has been confirmed.");
+        if(Killer != None) killer.PlayerReplicationInfo.Score += 3;
+        Destroy();
+    }
     // Find nearest player if multiple are close-by.
 	lowestDist = 1024;
 
@@ -42,13 +53,15 @@ function Capture(DeusExPlayer winner){
     if(winner == victim){
         BroadcastMessage(GetName(winner)@"has denied their death by "@GetName(killer)@".");
         winner.PlayerReplicationInfo.Score += 1;
+        Destroy();
         return
     }
 
     if(winner == killer){
         BroadcastMessage(GetName(winner)@"has confirmed their kill of "@GetName(victim)@".");
         victim.PlayerReplicationInfo.Deaths += 1;
-        winner.PlayerReplicationInfo.Score += 5;
+        winner.PlayerReplicationInfo.Score += 3;
+        Destroy()
         return
     }
 
@@ -56,7 +69,7 @@ function Capture(DeusExPlayer winner){
         if(winner.PlayerReplicationInfo.Team == victim.PlayerReplicationInfo.Team){
             BroadcastMessage(GetName(winner)@"has confirmed their teammate ("@GetName(Killer)@")'s kill of "@GetName(victim)@".");
             victim.PlayerReplicationInfo.Deaths += 1;
-            winner.PlayerReplicationInfo.Score += 1;
+            winner.PlayerReplicationInfo.Score += 2;
         } else {
             BroadcastMessage(GetName(winner)@"has denied their teammate ("@GetName(victim)@")'s death by "@GetName(killer)@".");
             victim.PlayerReplicationInfo.Score += 1;

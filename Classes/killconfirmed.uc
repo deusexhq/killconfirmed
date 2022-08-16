@@ -29,7 +29,7 @@ simulated function ShowMessage(DeusExPlayer Player, string Message){
     HUD.winText.SetText("");
     HUD.winTextShadow.SetText("");
     HUD.displayTime = 5.50;
-    HUD.perCharDelay = 0.30;
+    HUD.perCharDelay = 0.20;
     HUD.AddMessage(Message);
     HUD.StartMessage();
   }
@@ -39,10 +39,15 @@ function ScoreKill(Pawn Killer, Pawn Other){
   local DeusExPlayer dxp, victim;
   local CapturePoint cpt;
   local Vector SpawnLoc;
+
+  if(!bEnabled) return;
+
   dxp = DeusExPlayer(Killer);
   victim = DeusExPlayer(Other);
-  //BroadcastMessage("Scorekilled");
+  
   if(dxp != None && victim != None && dxp != victim){
+
+    ShowMessage(dxp, "Confirm the kill by taken the symbol from the body!")
     //BroadcastMessage("Both are players!");
     SpawnLoc = victim.location;
     SpawnLoc.Z += 50;
@@ -61,20 +66,7 @@ function ScoreKill(Pawn Killer, Pawn Other){
 	
   if(bBlockScoreKill == False){
     super.ScoreKill(Killer, Other);
-  } else 
-  	
-}
-
-
-function PrintToAll(string Str){
-  local DeusExPlayer DXP;
-  foreach allActors(class'DeusExPlayer',DXP){
-    DXP.ClientMessage(str, 'Say');
-  }
-}
-
-function PrintToPlayer(DeusExPlayer dxp, string Message){
-    if (dxp != none) dxp.ClientMessage(Message,'TeamSay');
+  }  	
 }
 
 function ResetScores(){
@@ -87,11 +79,33 @@ function ResetScores(){
 }
 
 function Mutate(string MutateString, PlayerPawn Sender){
+  if(MutateString ~= "kc"){
+    Sender.ClientMessage("Kill Confirmed (Enabled: "@bEnabled@)
+  }
 
-  if(MutateString == "dbg"){
+  if(MutateString ~= "kc.debug"){
     bBlockScoreKill = !bBlockScoreKill;
     Sender.ClientMessage(bBlockScoreKill);
     SaveConfig();
+  }
+
+  if(MutateString ~= "kc.resetscores"){
+    ResetScores();
+    BroadcastMessage("Scoreboard reset.");
+  }
+
+  if(MutateString ~= "kc.enable"){
+    if(bEnabled) return;
+    bEnabled = True;
+    SaveConfig();
+    BroadcastMessage("Kill Confirmed enabled.");
+  }
+
+  if(MutateString ~= "kc.disable"){
+    if(!bEnabled) return;
+    bEnabled = false;
+    SaveConfig();
+    BroadcastMessage("Kill Confirmed disabled.");
   }
 
   Super.Mutate(MutateString, Sender);
