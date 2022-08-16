@@ -1,38 +1,13 @@
 class killconfirmed extends Mutator config(OpenGames);
 
 var() config bool bEnabled;
-var() config bool bBlockScoreKill;
-
-replication
-{
-   reliable if (Role == ROLE_Authority)
-      ShowMessage;
-}
 
 function PostBeginPlay(){
   Level.Game.BaseMutator.AddMutator (Self);
 	Super.PostBeginPlay();
-}
 
-
-
-simulated function ShowMessage(DeusExPlayer Player, string Message){
-  local HUDMissionStartTextDisplay    HUD;
-  if ((Player.RootWindow != None) && (DeusExRootWindow(Player.RootWindow).HUD != None))  {
-    HUD = DeusExRootWindow(Player.RootWindow).HUD.startDisplay;
-  }
-  if(HUD != None)  {
-    HUD.shadowDist = 0;
-	  HUD.setFont(Font'FontMenuSmall_DS');
-    HUD.Message = "";
-    HUD.charIndex = 0;
-    HUD.winText.SetText("");
-    HUD.winTextShadow.SetText("");
-    HUD.displayTime = 5.50;
-    HUD.perCharDelay = 0.20;
-    HUD.AddMessage(Message);
-    HUD.StartMessage();
-  }
+  if(bEnabled) DeusExMPGame(Level.Game).bFreezeScores = True;
+  
 }
 
 function ScoreKill(Pawn Killer, Pawn Other){
@@ -40,33 +15,26 @@ function ScoreKill(Pawn Killer, Pawn Other){
   local CapturePoint cpt;
   local Vector SpawnLoc;
 
-  if(!bEnabled) return;
+  if(bEnabled) {
+    dxp = DeusExPlayer(Killer);
+    victim = DeusExPlayer(Other);
+    
+    if(dxp != None && victim != None && dxp != victim){
 
-  dxp = DeusExPlayer(Killer);
-  victim = DeusExPlayer(Other);
-  
-  if(dxp != None && victim != None && dxp != victim){
+      dxp.ClientMessage("Confirm the kill by taken the symbol from the body!");
 
-    ShowMessage(dxp, "Confirm the kill by taken the symbol from the body!")
-    //BroadcastMessage("Both are players!");
-    SpawnLoc = victim.location;
-    SpawnLoc.Z += 50;
-    cpt = Spawn(class'CapturePoint',,,SpawnLoc);
+      SpawnLoc = victim.location;
+      SpawnLoc.Z += 50;
+      cpt = Spawn(class'CapturePoint',,,SpawnLoc);
 
-    if(cpt != None){
-      cpt.Killer = dxp;
-      cpt.Victim = victim;
-    }
-
-    if(bBlockScoreKill == True){
-      Killer.PlayerReplicationInfo.Score -= 1;
-      Victim.PlayerReplicationInfo.Deaths -= 1;
+      if(cpt != None){
+        cpt.Killer = dxp;
+        cpt.Victim = victim;
+      } 
     }
   }
-	
-  if(bBlockScoreKill == False){
-    super.ScoreKill(Killer, Other);
-  }  	
+
+  super.ScoreKill(Killer, Other); 	
 }
 
 function ResetScores(){
@@ -80,28 +48,26 @@ function ResetScores(){
 
 function Mutate(string MutateString, PlayerPawn Sender){
   if(MutateString ~= "kc"){
-    Sender.ClientMessage("Kill Confirmed (Enabled: "@bEnabled@)
+    Sender.ClientMessage("Kill Confirmed (Enabled: "@bEnabled@")");
   }
 
-  if(MutateString ~= "kc.debug"){
-    bBlockScoreKill = !bBlockScoreKill;
-    Sender.ClientMessage(bBlockScoreKill);
-    SaveConfig();
+  if(MutateString ~= "kc.help"){
+    sender.ClientMessage("kc, kc.help, *kc.resetscores, *kc.enable, *kc.disable");
   }
 
-  if(MutateString ~= "kc.resetscores"){
+  if(MutateString ~= "kc.resetscores" && DeusExPlayer(Sender).bAdmin){
     ResetScores();
     BroadcastMessage("Scoreboard reset.");
   }
 
-  if(MutateString ~= "kc.enable"){
+  if(MutateString ~= "kc.enable" && DeusExPlayer(Sender).bAdmin){
     if(bEnabled) return;
     bEnabled = True;
     SaveConfig();
     BroadcastMessage("Kill Confirmed enabled.");
   }
 
-  if(MutateString ~= "kc.disable"){
+  if(MutateString ~= "kc.disable" && DeusExPlayer(Sender).bAdmin){
     if(!bEnabled) return;
     bEnabled = false;
     SaveConfig();
@@ -114,5 +80,5 @@ function Mutate(string MutateString, PlayerPawn Sender){
 
 defaultproperties
 {
-  bBlockScoreKill=True
+  bEnabled=True
 }
